@@ -8,6 +8,7 @@ const TICK_INTERVAL = 1000;
 export default function App() {
   const index  = useRef(new Animated.Value(0)).current;
   const tick = useRef(new Animated.Value(0)).current;
+  const scales = useRef([...Array(6).keys()].map(() => new Animated.Value(0))).current;
   const [timer, setTimer] = useState(0);
 
   useEffect(()=>{
@@ -20,49 +21,68 @@ export default function App() {
     const ticker = setInterval(() => {
       setTimer(timer+1);
       tick.setValue(timer);
-    });
+    }, TICK_INTERVAL);
     return () => {
       clearInterval(ticker);
     }
-  },[]);
+  },[timer]);
 
   const animate = () => {
-    Animated.timing(index, {
-      toValue: tick,
-      duration: TICK_INTERVAL/2,
-      useNativeDriver: true,
-    }).start();
+    const scaleStaggerAnimations = scales.map(animated => {
+      return Animated.spring(animated, {
+        toValue: 1,
+        tension: 18,
+        friction: 3,
+        useNativeDriver: true
+      });
+    });
+
+    Animated.parallel([
+        Animated.stagger(TICK_INTERVAL / scales.length, scaleStaggerAnimations),
+        Animated.timing(index, {
+          toValue: tick,
+          duration: TICK_INTERVAL/2,
+          useNativeDriver: true,
+      })
+    ]).start();
   };
 
-  const rotateSeconds = '25deg';
+  const [smallScale, mediumScale, bigScale, secondsScale, minutesScale, hoursScale] = scales;
+
+  const interpolated = {
+    inputRange: [0, 360],
+    outputRange: ['0deg', '360deg']
+  };
+
+  const secondDegrees = Animated.multiply(index, 6);
   const transformSeconds = {
-    transform: [{ rotate: rotateSeconds }]
+    transform: [{ rotate: secondDegrees.interpolate(interpolated)}, { scale: secondsScale }]
   };
 
-  const rotateMinutes = '125deg';
+  const rotateMinutes = Animated.divide(secondDegrees, new Animated.Value(60));
   const transformMinutes = {
-    transform: [{ rotate: rotateMinutes }]
+    transform: [{ rotate: rotateMinutes.interpolate(interpolated) }, { scale: minutesScale }]
   };
 
-  const rotateHours = '65deg';
+  const rotateHours = Animated.divide(rotateMinutes, new Animated.Value(12));
   const transformHours = {
-    transform: [{ rotate: rotateHours }]
+    transform: [{ rotate: rotateHours.interpolate(interpolated) }, { scale: hoursScale }]
   };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.bigQuadran]} />
-      <View style={[styles.mediumQuadran]} />
-      <View style={[styles.mover, transformHours]}>
+      <Animated.View style={[styles.bigQuadran, {transform: [{ scale: bigScale }]} ]} />
+      <Animated.View style={[styles.mediumQuadran, {transform: [{ scale: mediumScale }]}]} />
+      <Animated.View style={[styles.mover, transformHours]}>
         <View style={[styles.hours]}/>
-      </View>
-      <View style={[styles.mover, transformMinutes]}>
+      </Animated.View>
+      <Animated.View style={[styles.mover, transformMinutes]}>
         <View style={[styles.minutes]}/>
-      </View>
-      <View style={[styles.mover, transformSeconds]}>
+      </Animated.View>
+      <Animated.View style={[styles.mover, transformSeconds]}>
         <View style={[styles.seconds]}/>
-      </View>
-      <View style={[styles.smallQuadran]} />
+      </Animated.View>
+      <Animated.View style={[styles.smallQuadran, {transform: [{ scale: smallScale }]}]} />
     </View>
   );
 }
