@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Dimensions, View, Animated } from 'react-native';
 import dayjs from 'dayjs';
+import useInterval from "./useInterval";
 const { width } = Dimensions.get('screen');
 const SIZE = width;
 const TICK_INTERVAL = 1000;
@@ -16,16 +17,14 @@ export default function App() {
     const diff = current.endOf('day').diff(current, 'seconds');
     const oneDay = 24 * 60 * 60;
     setTimer(oneDay - diff);
-    tick.setValue(timer);
+    tick.setValue(oneDay - diff);
     animate();
-    const ticker = setInterval(() => {
-      setTimer(timer+1);
-      tick.setValue(timer);
-    }, TICK_INTERVAL);
-    return () => {
-      clearInterval(ticker);
-    }
-  },[timer]);
+  });
+
+  useInterval(() => {
+    setTimer(timer+1);
+    Animated.add(tick, new Animated.Value(1));
+  }, TICK_INTERVAL);
 
   const animate = () => {
     const scaleStaggerAnimations = scales.map(animated => {
